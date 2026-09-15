@@ -9,11 +9,13 @@ export const GlobalStyle = createGlobalStyle`
   :focus-visible { outline: 2px solid #4263a6; outline-offset: 3px; }
   h1, h2, p { margin: 0; }
 `
+// Content is 1152px wide in single view and 1472px in the split view (≥1280px); the header aligns with it.
 export const Header = styled.header`
   position: sticky; top: 0; z-index: 10; height: 68px;
   background: rgba(250, 251, 253, .84); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
   border-bottom: 1px solid #dfe3e9; padding: 0 max(24px, calc((100vw - 1152px) / 2));
   display: flex; align-items: center; gap: 10px;
+  @media (min-width: 1280px) { padding: 0 max(24px, calc((100vw - 1472px) / 2)); }
 `
 export const Logo = styled.span`
   width: 28px; height: 28px; display: grid; place-items: center; border-radius: 7px;
@@ -21,7 +23,11 @@ export const Logo = styled.span`
 `
 export const Brand = styled.div`font-size: 16px; font-weight: 650; letter-spacing: -.4px;`
 export const Muted = styled.p`color: #667184; line-height: 1.6; font-size: 13px;`
-export const Main = styled.main`max-width: 1200px; margin: 0 auto; padding: 44px 24px 64px; @media(max-width: 600px) { padding: 28px 12px; }`
+export const Main = styled.main`
+  max-width: 1200px; margin: 0 auto; padding: 44px 24px 64px;
+  @media (min-width: 1280px) { max-width: 1520px; padding-bottom: 24px; }
+  @media(max-width: 600px) { padding: 28px 12px; }
+`
 export const Intro = styled.div`
   margin-bottom: 26px;
   h1 { font-size: clamp(27px, 4vw, 36px); letter-spacing: -1.2px; font-weight: 600; }
@@ -42,8 +48,7 @@ export const State = styled.div`padding: 64px 24px; text-align: center; display:
 export const Footer = styled.div`padding: 16px 28px; border-top: 1px solid #e6e9ee; color: #606c7d; font-size: 12px; line-height: 1.6;`
 
 export const RefreshNotice = styled.div`
-  margin: 20px 24px 0; padding: 14px 16px; background: #fff8e8; border: 1px solid #e8d6a9;
+  margin: 0 0 16px; padding: 14px 16px; background: #fff8e8; border: 1px solid #e8d6a9;
   border-radius: 6px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
   strong { display: block; margin-bottom: 4px; color: #705015; }
-  @media(max-width: 600px) { margin: 16px 12px 0; }
 `

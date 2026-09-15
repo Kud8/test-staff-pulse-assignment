@@ -16,6 +16,8 @@ function renderApp() {
 }
 function jsonResponse(data: unknown) { return new Response(JSON.stringify(data)) }
 const departmentName = 'Разработка платформы, сотрудников: 10, эффективность: 65%'
+// jsdom has no layout engine, and selecting a node asks the browser to reveal it in both panels.
+Element.prototype.scrollIntoView = () => {}
 
 afterEach(() => {
   cleanup()
