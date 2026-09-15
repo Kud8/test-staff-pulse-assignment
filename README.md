@@ -1,75 +1,44 @@
-# React + TypeScript + Vite
+# Staff Pulse
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Русскоязычный dashboard организационной структуры. Реализован и принят **этап 1 — FOUNDATION** (тег `step/1`). Этапы 2–4 не начаты.
 
-Currently, two official plugins are available:
+## Установка
+Node.js ≥22.12 (проверяется на 24), Yarn Classic 1.22.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```sh
+yarn install --frozen-lockfile
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+## Запуск одной командой
+```sh
+yarn dev
 ```
+Клиент: http://127.0.0.1:5173. API: http://127.0.0.1:3001/api/org-tree. Ctrl+C завершает оба процесса. Vite проксирует `/api`; сервер слушает только loopback. Раздельно: `yarn dev:client`, `yarn dev:server`.
+
+## Проверки
+```sh
+yarn typecheck
+yarn lint
+yarn test
+yarn build
+```
+Сборка frontend находится в `dist`. Production-сервер и Docker относятся к этапу 4. `yarn preview` показывает статику, но не проксирует API: для проверки текущего этапа используйте `yarn dev`.
+
+Ручная проверка: при открытии видны три уровня; сверните отдел и дивизион, используйте «Раскрыть всё»/«Свернуть всё», выберите подразделение. Проверьте Tab/Enter/Space и узкий экран. Числа в дереве — собственные значения, не суммы потомков.
+
+## Конфигурация и ограничения
+API поддерживает `PORT` (по умолчанию 3001). При смене порта нужно согласовать target proxy в `vite.config.ts`. Полная env-конфигурация будет в BONUS. Данные детерминированы, не сохраняются в БД. Четыре корня, 40 узлов, три уровня. Поиск, таблица, агрегаты, live и AI ещё не реализованы. Live в этапе 3 будет менять только показатели существующих узлов; структурные изменения исключены.
+
+Кэш свежий 5 секунд: это не период polling. По истечении срока запрос возможен при возвращении фокуса, восстановлении сети или новом mount. Автоматических повторов нет, доступна кнопка повтора. Если не удалась первая загрузка, вместо дерева показывается экран ошибки. Если не удалось фоновое обновление, остаётся последний проверенный снимок: дерево, раскрытие и выделение сохраняются, над деревом появляется предупреждение с кнопкой «Повторить обновление». Отмена запроса ошибкой не считается. В development StrictMode может отменить первый запрос и запустить второй — это проверка React, не polling.
+
+## Документация
+- [Архитектура](docs/architecture.md)
+- [Модель данных](docs/data-model.md)
+- [ADR](docs/adr/001-cache-and-validation.md)
+
+## AI в разработке
+- Codex подготовил код FOUNDATION, данные, тесты и документацию.
+  Независимое ревью этого этапа провёл Claude Code: запускал проверки, воспроизводил состояния в браузере и отдельными тестами, по итогам составил замечания.
+  Исправления по ним внёс Codex; актуализацию документации и коммит этапа выполнил Claude Code.
+
+Справочные API: [TanStack Query](https://tanstack.com/query/v5/docs/framework/react/reference/useQuery), [Zod](https://zod.dev/api), [styled-components](https://styled-components.com/docs/api), [Vite proxy](https://vite.dev/config/server-options#server-proxy).
