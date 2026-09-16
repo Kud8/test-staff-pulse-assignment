@@ -70,7 +70,7 @@ describe('Дерево с данными', () => {
     try {
       const html = renderToStaticMarkup(sheet.collectStyles(<TreeHarness tree={buildTree(createSeed())} />))
       const css = sheet.getStyleTags()
-      for (const color of ['#34805b', '#a47b24', '#b55750']) expect(css).toContain(color)
+      for (const color of ['#1a8245', '#a06200', '#c0362c']) expect(css).toContain(color)
       for (const value of ['54', '65', '87']) expect(html).toContain(`${value}%`)
     } finally { sheet.seal() }
   })

@@ -1,11 +1,14 @@
-import { orgTreeSchema } from '#shared/org'
+import { orgTreeSchema, type OrgNode } from '#shared/org'
+
+/** A snapshot is the flat array plus the stream coordinates it belongs to. */
+export type OrgSnapshot = { nodes: OrgNode[]; session: string; version: number }
 
 function rethrowIfAborted(error: unknown, signal: AbortSignal) {
   signal.throwIfAborted()
   if (error instanceof Error && error.name === 'AbortError') throw error
 }
 
-export async function fetchOrgTree(signal: AbortSignal) {
+export async function fetchOrgTree(signal: AbortSignal): Promise<OrgSnapshot> {
   let response: Response
   try {
     response = await fetch('/api/org-tree', { signal })
@@ -23,5 +26,11 @@ export async function fetchOrgTree(signal: AbortSignal) {
   }
   const result = orgTreeSchema.safeParse(body)
   if (!result.success) throw new Error('Сервер вернул некорректную структуру подразделений')
-  return result.data
+  // Without these the client cannot tell whether a live patch belongs to this snapshot.
+  const session = response.headers.get('X-Org-Session')?.trim() ?? ''
+  const version = Number(response.headers.get('X-Org-Version'))
+  if (!session || !Number.isInteger(version) || version < 1) {
+    throw new Error('Сервер не сообщил версию снимка. Обновите страницу позже')
+  }
+  return { nodes: result.data, session, version }
 }

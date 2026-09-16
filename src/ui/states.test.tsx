@@ -14,7 +14,9 @@ function renderApp() {
   render(<QueryClientProvider client={client}><App /></QueryClientProvider>)
   return client
 }
-function jsonResponse(data: unknown) { return new Response(JSON.stringify(data)) }
+function jsonResponse(data: unknown) {
+  return new Response(JSON.stringify(data), { headers: { 'X-Org-Session': 'session-1', 'X-Org-Version': '1' } })
+}
 const departmentName = 'Разработка платформы, сотрудников: 10, эффективность: 65%'
 // jsdom has no layout engine, and selecting a node asks the browser to reveal it in both panels.
 Element.prototype.scrollIntoView = () => {}
@@ -70,7 +72,7 @@ describe('Состояния интерфейса через настоящий 
     await act(async () => { respond(new Response('', { status: 502 })) })
     const notice = await screen.findByRole('alert')
     expect(notice.textContent).toContain('Не удалось обновить данные')
-    expect(client.getQueryData<unknown[]>(orgQueryOptions.queryKey)).toHaveLength(40)
+    expect(client.getQueryData(orgQueryOptions.queryKey)?.nodes).toHaveLength(40)
     expect(screen.getByRole('list', { name: 'Подразделения 40' })).toBe(tree)
     expect(screen.getByRole('button', { name: departmentName })).toBe(department)
     expect(department.getAttribute('aria-expanded')).toBe('false')

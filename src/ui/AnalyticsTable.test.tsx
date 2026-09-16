@@ -24,7 +24,7 @@ describe('Аналитическая таблица', () => {
   it('показывает все подразделения со столбцами агрегатов в порядке дерева', () => {
     renderTable()
     expect(screen.getAllByRole('columnheader').map(cell => cell.textContent))
-      .toEqual(['Подразделение', 'Уровень', 'Всего сотрудников', 'Бюджет суммарный', 'Средняя эффективность'])
+      .toEqual(['Подразделение', 'Уровень', 'Сотрудники', 'Бюджет', 'Эффективность'])
     expect(names()).toHaveLength(40)
     expect(names().slice(0, 3)).toEqual(['Цифровые продукты', 'Разработка платформы', 'Серверные сервисы'])
     expect(valuesOf('Цифровые продукты')).toEqual(['Дивизион', '170', '9 665 000 руб.', '80,5%'])
@@ -35,17 +35,17 @@ describe('Аналитическая таблица', () => {
   it.each([
     ['Подразделение', 'Анализ данных', 'Экспертная поддержка'],
     ['Уровень', 'Цифровые продукты', 'Серверные сервисы'],
-    ['Всего сотрудников', 'Комплаенс', 'Цифровые продукты'],
-    ['Бюджет суммарный', 'Подбор персонала', 'Операционная деятельность'],
-    ['Средняя эффективность', 'Региональные продажи', 'Договорная работа'],
-  ])('«%s»: клик — по возрастанию, двойной клик — по убыванию', async (column, firstAscending, firstDescending) => {
+    ['Сотрудники', 'Комплаенс', 'Цифровые продукты'],
+    ['Бюджет', 'Подбор персонала', 'Операционная деятельность'],
+    ['Эффективность', 'Региональные продажи', 'Договорная работа'],
+  ])('«%s»: клик — по возрастанию, повторный клик — по убыванию', async (column, firstAscending, firstDescending) => {
     renderTable()
     const cell = screen.getByRole('columnheader', { name: column })
     const button = within(cell).getByRole('button')
     await userEvent.click(button)
     expect(cell.getAttribute('aria-sort')).toBe('ascending')
     expect(names()[0]).toBe(firstAscending)
-    await userEvent.dblClick(button)
+    await userEvent.click(button)
     expect(cell.getAttribute('aria-sort')).toBe('descending')
     expect(names()[0]).toBe(firstDescending)
     await userEvent.click(button)
@@ -53,7 +53,19 @@ describe('Аналитическая таблица', () => {
     expect(names()[0]).toBe(firstAscending)
   })
 
-  it('Enter на заголовке переключает направление, потому что двойной клик с клавиатуры недоступен', async () => {
+  it('клик по другому столбцу начинает с возрастания', async () => {
+    renderTable()
+    const budget = screen.getByRole('columnheader', { name: 'Бюджет' })
+    const level = screen.getByRole('columnheader', { name: 'Уровень' })
+    await userEvent.click(within(budget).getByRole('button'))
+    await userEvent.click(within(budget).getByRole('button'))
+    expect(budget.getAttribute('aria-sort')).toBe('descending')
+    await userEvent.click(within(level).getByRole('button'))
+    expect(level.getAttribute('aria-sort')).toBe('ascending')
+    expect(budget.hasAttribute('aria-sort')).toBe(false)
+  })
+
+  it('Enter на заголовке переключает направление так же, как клик мышью', async () => {
     renderTable()
     const cell = screen.getByRole('columnheader', { name: 'Уровень' })
     within(cell).getByRole('button').focus()
@@ -62,6 +74,33 @@ describe('Аналитическая таблица', () => {
     await userEvent.keyboard('{Enter}')
     expect(cell.getAttribute('aria-sort')).toBe('descending')
     expect(names()[0]).toBe('Серверные сервисы')
+  })
+
+  it('стрелки, Home и End переводят фокус по строкам', async () => {
+    renderTable()
+    const buttons = bodyRows().map(row => within(row).getByRole('button'))
+    buttons[0]!.focus()
+    await userEvent.keyboard('{ArrowDown}')
+    expect(document.activeElement).toBe(buttons[1])
+    await userEvent.keyboard('{ArrowUp}')
+    expect(document.activeElement).toBe(buttons[0])
+    await userEvent.keyboard('{ArrowUp}')
+    expect(document.activeElement).toBe(buttons[0])
+    await userEvent.keyboard('{End}')
+    expect(document.activeElement).toBe(buttons.at(-1))
+    await userEvent.keyboard('{Home}')
+    expect(document.activeElement).toBe(buttons[0])
+  })
+
+  it('в порядок обхода Tab попадает одна строка таблицы', async () => {
+    renderTable()
+    const tabbable = () => bodyRows().filter(row => within(row).getByRole('button').tabIndex === 0)
+    expect(tabbable()).toHaveLength(1)
+    expect(within(tabbable()[0]!).getByRole('rowheader').textContent).toBe('Цифровые продукты')
+    bodyRows()[0]!.querySelector('button')!.focus()
+    await userEvent.keyboard('{ArrowDown}{ArrowDown}')
+    expect(tabbable()).toHaveLength(1)
+    expect(within(tabbable()[0]!).getByRole('rowheader').textContent).toBe('Серверные сервисы')
   })
 
   it('фильтрует по названию через 250 мс после последнего ввода', () => {

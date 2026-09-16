@@ -58,7 +58,28 @@ describe('Контракт и дерево', () => {
   })
 })
 
+const snapshotResponse = (nodes: unknown, headers: Record<string, string> = { 'X-Org-Session': 'session-1', 'X-Org-Version': '7' }) =>
+  new Response(JSON.stringify(nodes), { headers })
+
 describe('API и кэш', () => {
+  it('возвращает снимок с версией и сессией из заголовков', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => snapshotResponse(createSeed())))
+    const snapshot = await fetchOrgTree(new AbortController().signal)
+    expect(snapshot.session).toBe('session-1')
+    expect(snapshot.version).toBe(7)
+    expect(snapshot.nodes).toHaveLength(40)
+  })
+  it.each<{ headers: Record<string, string>; why: string }>([
+    { headers: {}, why: 'заголовков нет' },
+    { headers: { 'X-Org-Session': 'session-1' }, why: 'нет версии' },
+    { headers: { 'X-Org-Session': 'session-1', 'X-Org-Version': '0' }, why: 'версия не положительная' },
+    // Значение заголовка обязано быть ASCII, иначе ошибку бросит конструктор Response, а не проверка контракта.
+    { headers: { 'X-Org-Session': 'session-1', 'X-Org-Version': 'seven' }, why: 'версия не число' },
+    { headers: { 'X-Org-Session': ' ', 'X-Org-Version': '3' }, why: 'пустая сессия' },
+  ])('отклоняет ответ без версии снимка: $why', async ({ headers }) => {
+    vi.stubGlobal('fetch', vi.fn(async () => snapshotResponse(createSeed(), headers)))
+    await expect(fetchOrgTree(new AbortController().signal)).rejects.toThrow('версию снимка')
+  })
   it('передаёт AbortSignal в fetch и проверяет тело', async () => {
     const fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify([{ bad: true }])))
     vi.stubGlobal('fetch', fetch)
@@ -85,7 +106,7 @@ describe('API и кэш', () => {
   })
   it('повторно использует данные 5 секунд и сохраняет ссылки при равном ответе', async () => {
     vi.useFakeTimers()
-    const fetch = vi.fn().mockImplementation(async () => new Response(JSON.stringify(createSeed())))
+    const fetch = vi.fn().mockImplementation(async () => snapshotResponse(createSeed()))
     vi.stubGlobal('fetch', fetch)
     const client = new QueryClient()
     const first = await client.fetchQuery(orgQueryOptions)
