@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "concurrently -k -n api,web \"yarn dev:server\" \"yarn dev:client\"",
     "dev:client": "vite",
-    "dev:server": "tsx watch server/index.ts",
+    "dev:server": "tsx watch --env-file-if-exists=.env server/index.ts",
+    "start:server": "node --env-file-if-exists=.env server/index.ts",
+    "size": "node scripts/bundle-size.mjs",
     "typecheck": "tsc -b",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
@@ -48,6 +50,6 @@
     "#server/*": "./server/*.ts"
   },
   "engines": {
-    "node": ">=22.12.0"
+    "node": ">=24.0.0"
   }
 }

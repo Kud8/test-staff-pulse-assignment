@@ -1,0 +1,30 @@
+services:
+  backend:
+    build:
+      context: .
+      target: backend
+    environment:
+      HOST: 0.0.0.0
+      PORT: 3001
+      LIVE_INTERVAL_MS: ${LIVE_INTERVAL_MS:-2000}
+      LIVE_HEARTBEAT_MS: ${LIVE_HEARTBEAT_MS:-5000}
+      AI_PROVIDER: ${AI_PROVIDER:-openai}
+      AI_MODEL: ${AI_MODEL:-gpt-4.1-mini-2025-04-14}
+      AI_API_KEY: ${AI_API_KEY:-}
+      AI_BASE_URL: ${AI_BASE_URL:-https://api.openai.com/v1}
+      AI_TIMEOUT_MS: ${AI_TIMEOUT_MS:-12000}
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3001/api/org-tree').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+  frontend:
+    build:
+      context: .
+      target: frontend
+    ports:
+      - "127.0.0.1:${WEB_PORT:-8080}:80"
+    depends_on:
+      backend:
+        condition: service_healthy

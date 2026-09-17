@@ -4,19 +4,24 @@ import { WebSocketServer } from 'ws'
 import { createSeed } from '#server/data'
 import { applyPatchToNodes, nextPatch } from '#server/live'
 import type { OrgNode } from '#shared/org'
+import { readConfig, type AiConfig } from '#server/config'
+import { createSearchHandler } from '#server/search'
 
-export type OrgServerOptions = { port?: number; host?: string; patchIntervalMs?: number; heartbeatMs?: number }
+export type OrgServerOptions = { port?: number; host?: string; patchIntervalMs?: number; heartbeatMs?: number; ai?: AiConfig }
 
-export async function createOrgServer({ port = 3001, host = '127.0.0.1', patchIntervalMs = 2000, heartbeatMs = 5000 }: OrgServerOptions = {}) {
+export async function createOrgServer({ port = 3001, host = '127.0.0.1', patchIntervalMs = 2000, heartbeatMs = 5000, ai = readConfig({}).ai }: OrgServerOptions = {}) {
   // A fresh session per start: after a restart clients must not trust their old version numbers.
   const session = randomUUID()
   let nodes: OrgNode[] = createSeed()
   let version = 1
+  const search = createSearchHandler(ai)
 
   const http = createServer((request, response) => {
     response.setHeader('Content-Type', 'application/json; charset=utf-8')
     response.setHeader('Cache-Control', 'no-store')
-    if (request.url?.split('?')[0] !== '/api/org-tree') {
+    if (request.url?.split('?')[0] === '/api/search') {
+      void search.handle(request, response)
+    } else if (request.url?.split('?')[0] !== '/api/org-tree') {
       response.writeHead(404).end(JSON.stringify({ message: 'Маршрут не найден' }))
     } else if (request.method !== 'GET') {
       response.setHeader('Allow', 'GET')
@@ -60,6 +65,7 @@ export async function createOrgServer({ port = 3001, host = '127.0.0.1', patchIn
     session,
     port: typeof address === 'object' && address !== null ? address.port : port,
     close: () => new Promise<void>(resolve => {
+      search.close()
       if (patches) clearInterval(patches)
       if (heartbeat) clearInterval(heartbeat)
       for (const client of live.clients) client.terminate()

@@ -1,0 +1,13 @@
+node_modules
+dist
+.git
+.env
+.env.*
+!.env.example
+artifacts
+docs
+*.pdf
+**/*.test.ts
+**/*.test.tsx
+.idea
+.codex

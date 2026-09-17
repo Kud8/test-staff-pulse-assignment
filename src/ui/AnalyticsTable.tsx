@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import styled from 'styled-components'
 import type { NodeAggregate } from '#src/model/aggregate'
 import type { LiveField } from '#src/model/live'
@@ -7,6 +7,9 @@ import { formatBudget, formatCount, formatLevel, formatPerformance } from '#src/
 import { useDebouncedValue } from '#src/ui/useDebouncedValue'
 import type { Highlights } from '#src/ui/useLiveOrg'
 import { c, Muted, performanceColor, performanceSoft, Toolbar, Updated } from '#src/ui/styles'
+import type { SearchFilter } from '#shared/search'
+import { applySearchFilter } from '#src/model/search'
+import { SearchBar } from '#src/ui/SearchBar'
 
 const FILTER_DELAY_MS = 250
 // Подписи короткие, чтобы колонки помещались без переносов; полное значение — в title и в подзаголовке панели.
@@ -18,18 +21,6 @@ const columns: { key: SortKey; label: string; hint?: string; numeric: boolean; l
   { key: 'performance', label: 'Эффективность', hint: 'Средняя эффективность по поддереву, взвешенная по численности', numeric: true, live: 'performance' },
 ]
 
-const FilterBar = styled.div`
-  display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; padding: 13px 22px; border-bottom: 1px solid ${c.line};
-  label { font-weight: 600; font-size: 12px; color: ${c.body}; }
-  @media(max-width: 600px) { padding: 13px 16px; }
-`
-const SearchInput = styled.input`
-  flex: 1 1 200px; min-width: 0; max-width: 340px; font: inherit; font-size: 12.5px; color: inherit; background: #fafbfd;
-  padding: 8px 12px; border: 1px solid #dde2ea; border-radius: 10px;
-  &::placeholder { color: #8d95a8; }
-  &:focus-visible { outline: none; border-color: ${c.accent}; box-shadow: 0 0 0 3px rgba(19, 49, 92, .14); }
-`
-const Count = styled(Muted)`margin-left: auto; font-size: 11px; font-weight: 600; color: ${c.label};`
 const TableScroll = styled.div`
   overflow: auto;
   @media (min-width: 1280px) { flex: 1 1 auto; min-height: 0; }
@@ -89,13 +80,13 @@ type Props = { rows: NodeAggregate[]; selectedId: string | null; onSelect: (id: 
 const noHighlights: Highlights = new Map()
 
 export function AnalyticsTable({ rows, selectedId, onSelect, highlights = noHighlights }: Props) {
-  const filterId = useId()
   const [query, setQuery] = useState('')
+  const [aiFilter, setAiFilter] = useState<SearchFilter | null>(null)
   const appliedQuery = useDebouncedValue(query, FILTER_DELAY_MS)
   const [sort, setSort] = useState<Sort>(null)
   const [focusedId, setFocusedId] = useState<string | null>(null)
   // Rows arrive already aggregated: filtering and sorting only reorder precomputed values.
-  const visible = useMemo(() => sortRows(filterRows(rows, appliedQuery), sort), [rows, appliedQuery, sort])
+  const visible = useMemo(() => sortRows(applySearchFilter(filterRows(rows, aiFilter ? '' : appliedQuery), aiFilter), sort), [rows, appliedQuery, aiFilter, sort])
   // Полоса в ячейке бюджета показывает долю от самого дорогого подразделения.
   const maxBudget = useMemo(() => Math.max(1, ...rows.map(row => row.budget)), [rows])
 
@@ -129,11 +120,7 @@ export function AnalyticsTable({ rows, selectedId, onSelect, highlights = noHigh
     <Toolbar>
       <div><h2>Аналитика</h2><Muted>Суммы включают подразделение и все дочерние. Клик по заголовку — сортировка, повторный клик — обратный порядок.</Muted></div>
     </Toolbar>
-    <FilterBar>
-      <label htmlFor={filterId}>Фильтр по названию</label>
-      <SearchInput id={filterId} type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Например, продажи" autoComplete="off" spellCheck={false} />
-      <Count aria-live="polite">{`Показано: ${visible.length} из ${rows.length}`}</Count>
-    </FilterBar>
+    <SearchBar onChange={(text, filter) => { setQuery(text); setAiFilter(filter) }} count={visible.length} total={rows.length} />
     <TableScroll>
       <Table aria-label="Аналитика подразделений">
         <thead><tr>{columns.map(column => {
@@ -170,7 +157,7 @@ export function AnalyticsTable({ rows, selectedId, onSelect, highlights = noHigh
                   : <Performance $value={row.performance}>{formatPerformance(row.performance)}</Performance>}
               </Cell>
             </BodyRow>
-          }) : <tr><EmptyCell colSpan={columns.length}>{`Ничего не найдено по запросу «${appliedQuery.trim()}»`}</EmptyCell></tr>}
+          }) : <tr><EmptyCell colSpan={columns.length}>{aiFilter ? 'Нет подразделений, соответствующих условиям' : `Ничего не найдено по запросу «${appliedQuery.trim()}»`}</EmptyCell></tr>}
         </tbody>
       </Table>
     </TableScroll>
